@@ -27,10 +27,17 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS ruxsatlari
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "https://test.ulkanov.uz",
 ]
+
+# CSRF uchun domenni ishonchli sifatida belgilash
+CSRF_TRUSTED_ORIGINS = [
+    "https://test.ulkanov.uz",
+]
+
 
 CORS_ALLOW_METHODS = [
     "GET",
