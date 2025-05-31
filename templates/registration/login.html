@@ -1,0 +1,162 @@
+{% extends 'main.html' %}
+{% block title %}Kirish{% endblock %}
+{% block style %}
+<style>
+    .glass {
+        backdrop-filter: blur(16px);
+        background: rgba(255, 255, 255, 0.05);
+        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
+    }
+    .glass::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(250, 204, 21, 0.1), rgba(30, 58, 138, 0.1));
+        z-index: -1;
+    }
+    .form-container {
+        max-width: 420px;
+        margin: 2rem auto;
+        padding: 2.5rem;
+        transition: transform 0.3s ease;
+    }
+    .form-container:hover {
+        transform: translateY(-4px);
+    }
+    .input-field {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #facc15;
+        padding: 0.85rem 1rem;
+        border-radius: 8px;
+        width: 100%;
+        outline: none;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+    }
+    .input-field:focus {
+        border-color: #facc15;
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 0 8px rgba(250, 204, 21, 0.3);
+        animation: pulse 1.5s infinite;
+    }
+    .input-wrapper {
+        position: relative;
+    }
+    .eye-icon {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #facc15;
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+    .eye-icon:hover {
+        color: #f7e05e;
+    }
+    .submit-button {
+        background: linear-gradient(135deg, #facc15, #f7e05e);
+        color: #1e3a8a;
+        font-weight: 600;
+        padding: 0.85rem 1rem;
+        border-radius: 8px;
+        width: 100%;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .submit-button:hover {
+        background: linear-gradient(135deg, #f7e05e, #facc15);
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(250, 204, 21, 0.4);
+    }
+    .error-message {
+        color: #ff6b6b;
+        font-size: 0.85rem;
+        margin-top: 0.75rem;
+        text-align: center;
+    }
+    .reset-link {
+        color: #facc15;
+        font-size: 0.9rem;
+        text-align: center;
+        display: block;
+        margin-top: 1rem;
+        transition: all 0.3s ease;
+    }
+    .reset-link:hover {
+        color: #f7e05e;
+        text-decoration: underline;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 8px rgba(250, 204, 21, 0.3); }
+        50% { box-shadow: 0 0 12px rgba(250, 204, 21, 0.5); }
+        100% { box-shadow: 0 0 8px rgba(250, 204, 21, 0.3); }
+    }
+</style>
+{% endblock style %}
+
+{% block content %}
+<div class="form-container glass">
+    <h1 class="text-2xl font-bold text-yellow-400 mb-6 text-center">Kirish</h1>
+
+    <!-- Xato xabarlari -->
+    {% if messages %}
+        <div class="error-message">
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Login formasi -->
+    <form method="POST" action="{% url 'login' %}" class="flex flex-col space-y-4">
+        {% csrf_token %}
+        <div>
+            <label for="username" class="text-white text-sm mb-1 block">Foydalanuvchi nomi</label>
+            <input type="text" id="username" name="username" placeholder="Foydalanuvchi nomingiz" class="input-field" required>
+        </div>
+        <div class="input-wrapper">
+            <label for="password" class="text-white text-sm mb-1 block">Parol</label>
+            <input type="password" id="password" name="password" placeholder="Parolingiz" class="input-field" required>
+            <span class="eye-icon" onclick="togglePassword()">
+                <svg id="eye-open" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                <svg id="eye-closed" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                </svg>
+            </span>
+        </div>
+        <button type="submit" class="submit-button">Kirish</button>
+        <a href="{% url 'password_reset' %}" class="reset-link">Parolni unutdingizmi?</a>
+    </form>
+</div>
+{% endblock content %}
+
+{% block script %}
+<script>
+    function togglePassword() {
+        const passwordField = document.getElementById('password');
+        const eyeOpen = document.getElementById('eye-open');
+        const eyeClosed = document.getElementById('eye-closed');
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+            eyeOpen.classList.add('hidden');
+            eyeClosed.classList.remove('hidden');
+        } else {
+            passwordField.type = 'password';
+            eyeOpen.classList.remove('hidden');
+            eyeClosed.classList.add('hidden');
+        }
+    }
+</script>
+{% endblock script %}

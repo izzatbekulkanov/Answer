@@ -1,0 +1,275 @@
+{% extends 'main.html' %}
+{% block title %}Savollar Ro‘yxati{% endblock %}
+{% block style %}
+<style>
+    .active-tab {
+        background-color: #facc15 !important;
+        color: #1e3a8a !important;
+    }
+    .drop-zone {
+        border: 2px dashed #fff3;
+        transition: all 0.3s;
+    }
+    .drop-zone.dragover {
+        border-color: #facc15;
+        background: #facc1511;
+    }
+    .search-input {
+        background: #1e3a8a22;
+        color: #facc15;
+        padding: 8px;
+        border-radius: 8px;
+        width: 100%;
+    }
+    @media (max-width: 768px) {
+        .glass { padding: 1rem; }
+        h1 { font-size: 1.5rem; }
+        .tab-btn { font-size: 0.875rem; padding: 0.5rem 1rem; }
+        .table-container { max-height: 300px; }
+    }
+</style>
+{% endblock style %}
+
+{% block content %}
+<div class="glass rounded-xl p-6 max-w-4xl mx-auto" id="app">
+    <div v-if="isLoading" class="loader-overlay">
+        <div class="loader"></div>
+    </div>
+
+    <h1 class="text-3xl font-bold text-yellow-400 mb-6 text-center">Savollarni yuklash</h1>
+
+    <div class="flex justify-center gap-4 mb-6">
+        <button @click="activeTab = 'hemis'"
+                :class="['tab-btn glass bg-blue-900/50 text-yellow-400 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-400 hover:text-blue-900 transition-all', activeTab === 'hemis' ? 'active-tab' : '']">
+            Hemis
+        </button>
+        <button @click="activeTab = 'moodle'"
+                :class="['tab-btn glass bg-blue-900/50 text-yellow-400 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-400 hover:text-blue-900 transition-all', activeTab === 'moodle' ? 'active-tab' : '']">
+            Moodle
+        </button>
+    </div>
+
+    <div v-if="errorMessage" class="glass bg-red-500/20 text-red-300 p-4 rounded-lg mb-6">
+        [[ errorMessage ]]
+    </div>
+    <div v-if="successMessage" class="glass bg-green-500/20 text-green-300 p-4 rounded-lg mb-6">
+        [[ successMessage ]]
+    </div>
+
+    <div v-show="activeTab === 'hemis'">
+        <form @submit.prevent="handleHemisSubmit">
+            <input type="hidden" name="csrfmiddlewaretoken" :value="csrfToken">
+            <div class="drop-zone p-8 text-center rounded-xl cursor-pointer"
+                 :class="{ 'dragover': hemisDragging }"
+                 @dragover.prevent="hemisDragging = true"
+                 @dragleave.prevent="hemisDragging = false"
+                 @drop.prevent="handleHemisDrop"
+                 @click="triggerHemisFileSelect">
+                <input type="file" ref="hemisFileInput" accept=".txt" @change="handleHemisFileChange" class="hidden">
+                <p v-if="!hemisFileName" class="text-yellow-400">.txt faylni torting yoki bosing</p>
+                <p v-else class="text-green-300 font-semibold">[[ hemisFileName ]] tanlandi</p>
+            </div>
+            <button type="submit" :disabled="!hemisFileName"
+                    class="mt-6 w-full glass bg-yellow-400 text-blue-900 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-300 transition-all disabled:opacity-50">
+                Yuklash
+            </button>
+        </form>
+
+        <div v-if="parsedQuestions.length" class="mt-8">
+            <h2 class="text-xl font-bold text-yellow-400 mb-4">Yuklangan savollar</h2>
+            <input v-model="searchQuery" type="text" placeholder="Savolni qidirish..." class="search-input mb-4">
+            <div class="table-container glass rounded-lg overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="sticky top-0 glass bg-blue-900/30">
+                        <tr>
+                            <th class="py-2 px-4 text-left text-yellow-400 font-semibold">Savol</th>
+                            <th class="py-2 px-4 text-left text-yellow-400 font-semibold">To‘g‘ri javoblar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(question, index) in filteredQuestions" :key="index">
+                            <td class="py-2 px-4 text-yellow-400">[[ question.number ]]. [[ question.text || 'N/A' ]]</td>
+                            <td class="py-2 px-4 text-green-300">
+                                <span v-for="(answer, aIndex) in question.correctAnswers" :key="aIndex">
+                                    [[ answer.text || 'Hech qanday' ]][[ aIndex < question.correctAnswers.length - 1 ? ', ' : '' ]]
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button @click="saveQuestions" :disabled="isLoading"
+                    class="mt-4 w-full glass bg-yellow-400 text-blue-900 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-300 transition-all">
+                Saqlash
+            </button>
+        </div>
+    </div>
+
+    <div v-show="activeTab === 'moodle'" class="glass p-6 text-center rounded-lg">
+        <p class="text-yellow-400 font-semibold text-xl">Tez kunda...</p>
+    </div>
+</div>
+{% endblock content %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    const { createApp } = Vue;
+    createApp({
+        delimiters: ['[[', ']]'],
+        data() {
+            return {
+                activeTab: 'hemis',
+                hemisFileName: '',
+                hemisDragging: false,
+                parsedQuestions: [],
+                successMessage: '',
+                errorMessage: '',
+                isLoading: false,
+                searchQuery: '',
+                csrfToken: '{{ csrf_token }}'
+            };
+        },
+        created() {
+            this.parseQuestions();
+            this.resetForm();
+        },
+        computed: {
+            filteredQuestions() {
+                return this.searchQuery
+                    ? this.parsedQuestions.filter(q => q.text.toLowerCase().includes(this.searchQuery.toLowerCase()))
+                    : this.parsedQuestions;
+            }
+        },
+        methods: {
+            parseQuestions() {
+                try {
+                    const serverQuestions = '{{ parsed_questions|escapejs }}';
+                    if (serverQuestions && serverQuestions !== '[]') {
+                        const parsedData = JSON.parse(serverQuestions.replace(/\\'/g, "'").replace(/\\"/g, '"'));
+                        this.parsedQuestions = parsedData.map(q => {
+                            console.log(`Parsing question ${q.number}:`, q);
+                            const correctAnswers = (q.answers || []).filter(a => a.is_correct).map(a => ({
+                                text: this.sanitize(a.text || ''),
+                                is_correct: true
+                            }));
+                            return {
+                                number: q.number,
+                                text: this.sanitize(q.text || ''),
+                                answers: (q.answers || []).map(a => ({
+                                    text: this.sanitize(a.text || ''),
+                                    is_correct: !!a.is_correct
+                                })),
+                                correctAnswers
+                            };
+                        });
+                    }
+                } catch (error) {
+                    this.errorMessage = 'Savollarni o‘qishda xato: ' + error.message;
+                    console.error('Parse error:', error);
+                }
+            },
+            sanitize(text) {
+                return (text || '').replace(/[<>"'&]/g, '');
+            },
+            triggerHemisFileSelect() {
+                this.$refs.hemisFileInput.click();
+            },
+            handleHemisFileChange(event) {
+                this.validateAndSetHemisFile(event.target.files[0]);
+            },
+            handleHemisDrop(event) {
+                this.hemisDragging = false;
+                this.validateAndSetHemisFile(event.dataTransfer.files[0]);
+            },
+            validateAndSetHemisFile(file) {
+                if (!file || !file.name.endsWith('.txt')) {
+                    this.errorMessage = 'Faqat .txt fayllar!';
+                    this.resetForm();
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    this.errorMessage = 'Fayl hajmi 5MB dan katta bo‘lmasligi kerak!';
+                    this.resetForm();
+                    return;
+                }
+                this.hemisFileName = file.name;
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                this.$refs.hemisFileInput.files = dt.files;
+            },
+            async handleHemisSubmit() {
+                if (!this.hemisFileName) {
+                    this.errorMessage = 'Iltimos, fayl tanlang!';
+                    return;
+                }
+                this.isLoading = true;
+                this.errorMessage = '';
+                try {
+                    const formData = new FormData();
+                    formData.append('hemis_file', this.$refs.hemisFileInput.files[0]);
+                    formData.append('csrfmiddlewaretoken', this.csrfToken);
+                    const response = await axios.post('{% url "hemis_upload" %}', formData);
+                    if (response.data.status === 'success') {
+                        this.parsedQuestions = response.data.questions.map(q => {
+                            const correctAnswers = (q.answers || []).filter(a => a.is_correct).map(a => ({
+                                text: this.sanitize(a.text || ''),
+                                is_correct: true
+                            }));
+                            return {
+                                number: q.number,
+                                text: this.sanitize(q.text || ''),
+                                answers: (q.answers || []).map(a => ({
+                                    text: this.sanitize(a.text || ''),
+                                    is_correct: !!a.is_correct
+                                })),
+                                correctAnswers
+                            };
+                        });
+                        this.successMessage = 'Fayl muvaffaqiyatli yuklandi!';
+                        setTimeout(() => this.successMessage = '', 2000);
+                    } else {
+                        this.errorMessage = response.data.message || 'Fayl yuklashda xato';
+                    }
+                } catch (error) {
+                    this.errorMessage = error.response?.data?.message || 'Fayl yuklashda xato: ' + error.message;
+                    console.error('Upload error:', error);
+                } finally {
+                    this.isLoading = false;
+                    this.resetForm();
+                }
+            },
+            async saveQuestions() {
+                this.isLoading = true;
+                this.errorMessage = '';
+                try {
+                    const formData = new FormData();
+                    formData.append('questions', JSON.stringify(this.parsedQuestions));
+                    formData.append('csrfmiddlewaretoken', this.csrfToken);
+                    const response = await axios.post('{% url "hemis_save" %}', formData);
+                    if (response.data.status === 'success') {
+                        this.successMessage = response.data.message;
+                        this.parsedQuestions = [];
+                        this.resetForm();
+                        setTimeout(() => this.successMessage = '', 2000);
+                    } else {
+                        this.errorMessage = response.data.message || 'Saqlashda xato';
+                    }
+                } catch (error) {
+                    this.errorMessage = error.response?.data?.message || 'Saqlashda xato: ' + error.message;
+                    console.error('Save error:', error);
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+            resetForm() {
+                this.hemisFileName = '';
+                this.hemisDragging = false;
+                if (this.$refs.hemisFileInput) {
+                    this.$refs.hemisFileInput.value = '';
+                }
+            }
+        }
+    }).mount('#app');
+</script>
+{% endblock script %}

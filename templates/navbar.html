@@ -1,0 +1,88 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<style>
+    .nav-link.active {
+        color: #facc15 !important;
+        font-weight: bold;
+        border-bottom: 2px solid #facc15;
+    }
+</style>
+
+<nav class="glass bg-blue-900/20 p-4 sticky top-0 z-10" style="backdrop-filter: blur(14px);">
+    <div class="container mx-auto flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+        <!-- Logo -->
+        <div class="flex justify-between items-center">
+            <a href="/" class="text-2xl font-bold text-yellow-400 hover:text-yellow-300 transition-all duration-300 transform hover:scale-105">Savol - Javob</a>
+            <!-- Mobil menyu uchun toggle tugmasi -->
+            <button onclick="toggleMenu()" class="md:hidden text-yellow-400 focus:outline-none transform hover:scale-110 transition-all duration-200">
+                <svg id="menu-open-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+                <svg id="menu-close-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Navigatsiya va qidirish -->
+        <div id="nav-menu" class="flex-col space-y-4 hidden md:flex md:flex-row md:items-center md:space-y-0 md:space-x-8">
+            <!-- Navigatsiya havolalari -->
+            <a href="/" class="nav-link text-white hover:text-yellow-400 transition-all duration-300 transform hover:scale-105 py-2 md:py-0">Bosh sahifa</a>
+            <a href="/questions/" class="nav-link text-white hover:text-yellow-400 transition-all duration-300 transform hover:scale-105 py-2 md:py-0">Savollar</a>
+            <a href="/users/" class="nav-link text-white hover:text-yellow-400 transition-all duration-300 transform hover:scale-105 py-2 md:py-0">Foydalanuvchilar</a>
+            {% if user.is_authenticated %}
+                <form method="POST" action="{% url 'logout' %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-white hover:text-yellow-400 transition-all duration-300 transform hover:scale-105 py-2 md:py-0 flex items-center">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Chiqish
+                    </button>
+                </form>
+            {% endif %}
+
+            <!-- Qidirish formasi -->
+            <form action="/" method="GET" class="flex items-center space-x-2 mt-4 md:mt-0">
+                <input type="text"
+                       name="q"
+                       id="search-input"
+                       placeholder="Savol yoki javob qidirish..."
+                       class="glass bg-white/10 text-yellow-400 placeholder-yellow-400/70 border border-white/20 rounded-lg px-3 py-2 text-sm focus:border-yellow-400 focus:bg-white/15 outline-none transition-all w-full md:w-48"
+                       oninput="cleanSearchInput()">
+                <button type="submit"
+                        class="glass bg-yellow-400 text-blue-900 font-semibold px-4 py-2 rounded-lg hover:bg-yellow-300 transition-all transform hover:scale-105">Qidirish</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<script>
+    function toggleMenu() {
+        const menu = document.getElementById('nav-menu');
+        const openIcon = document.getElementById('menu-open-icon');
+        const closeIcon = document.getElementById('menu-close-icon');
+        menu.classList.toggle('hidden');
+        menu.classList.toggle('flex');
+        openIcon.classList.toggle('hidden');
+        closeIcon.classList.toggle('hidden');
+    }
+
+    function cleanSearchInput() {
+        const searchInput = document.getElementById('search-input');
+        // \ , ', " belgilarni olib tashlash
+        searchInput.value = searchInput.value.replace(/['\\"]+/g, '');
+    }
+
+    // Joriy sahifaga mos navigatsiya havolasini active qilish
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentPath = window.location.pathname;
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        navLinks.forEach(link => {
+            // Agar linkning href'i joriy yo'l bilan mos kelsa yoki root sahifa bo‘lsa
+            const linkPath = link.getAttribute('href');
+            if (linkPath === currentPath ||
+                (currentPath === '/' && linkPath === '/')) {
+                link.classList.add('active');
+            }
+        });
+    });
+</script>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="uz">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}San'at Testlari{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+          integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <!-- Vue.js 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="icon" href="{% static 'images/logo.png' %}" type="image/png">
+    <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, #1a1a1a 0%, #1e3a8a 100%);
+            overflow: auto;
+            font-family: Arial, sans-serif;
+            color: #ffffff;
+        }
+        main {
+            flex: 1 0 auto;
+        }
+        footer {
+            flex-shrink: 0;
+        }
+        .glass {
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+        .search-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #facc15;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            width: 100%;
+            outline: none;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+        .search-input:focus {
+            border-color: #facc15;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .clear-button, .clean-db-button {
+            background: #facc15;
+            color: #1e3a8a;
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .clear-button:hover, .clean-db-button:hover {
+            background: #f7e05e;
+            transform: scale(1.05);
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #facc15 rgba(255, 255, 255, 0.1);
+        }
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #facc15;
+            border-radius: 4px;
+        }
+        .question-row, .user-row {
+            transition: all 0.3s;
+        }
+        .question-row:hover, .user-row:hover {
+            background: rgba(250, 204, 21, 0.1);
+            transform: translateY(-1px);
+        }
+        .warning-message {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(250, 204, 21, 0.3);
+            color: #facc15;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        .warning-message:hover {
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 8px rgba(250, 204, 21, 0.3);
+            animation: pulse 1.5s infinite;
+        }
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+        .loader-overlay.active {
+            display: flex;
+        }
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #facc15;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 8px rgba(250, 204, 21, 0.3); }
+            50% { box-shadow: 0 0 12px rgba(250, 204, 21, 0.5); }
+            100% { box-shadow: 0 0 8px rgba(250, 204, 21, 0.3); }
+        }
+        header, nav, footer {
+            background: linear-gradient(135deg, #1a1a1a 0%, #1e3a8a 100%);
+        }
+    </style>
+
+    {% block style %}
+    {% endblock style %}
+</head>
+<body class="font-sans text-white">
+<!-- Loader -->
+<div id="loader-overlay" class="loader-overlay">
+    <div class="loader"></div>
+</div>
+
+{% include 'header.html' %}
+{% if request.user.is_authenticated %}
+    {% include 'navbar.html' %}
+{% endif %}
+
+<main class="container mx-auto p-4">
+    {% block content %}
+    {% endblock %}
+</main>
+
+{% include 'footer.html' %}
+
+<script>
+    // Loader ni ko‘rsatish/yashirish funksiyalari
+    function showLoader() {
+        document.getElementById('loader-overlay').classList.add('active');
+    }
+
+    function hideLoader() {
+        document.getElementById('loader-overlay').classList.remove('active');
+    }
+
+    // Sahifa yuklanishi tugaganda loader ni yashirish
+    window.addEventListener('load', () => {
+        hideLoader();
+    });
+
+    // Barcha <a> teglariga click hodisasini qo‘shish
+    document.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            // Agar link external yoki download bo‘lmasa
+            if (!link.href.includes('http') && !link.hasAttribute('download') && !link.href.includes('#')) {
+                showLoader();
+            }
+        });
+    });
+
+    // Barcha forma submit hodisalariga loader qo‘shish
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', () => {
+            showLoader();
+        });
+    });
+
+    // Sahifa orqaga/oldinga navigatsiyasi uchun loader
+    window.addEventListener('beforeunload', () => {
+        showLoader();
+    });
+</script>
+
+{% block script %}
+{% endblock script %}
+</body>
+</html>

@@ -1,0 +1,258 @@
+{% extends 'main.html' %}
+{% block title %}Yangi Foydalanuvchi Qo‘shish{% endblock %}
+{% block style %}
+<style>
+    .file-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .file-input-wrapper input[type="file"] {
+        display: none;
+    }
+    .file-input-wrapper label {
+        cursor: pointer;
+        background: #1e3a8a;
+        color: #facc15;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+    .file-input-wrapper label:hover {
+        background: #facc15;
+        color: #1e3a8a;
+    }
+    .file-name {
+        color: #facc15;
+        font-size: 0.875rem;
+    }
+    .preview-image {
+        max-width: 100px;
+        max-height: 100px;
+        border-radius: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    .username-status {
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    .username-status.success {
+        color: #34d399;
+    }
+    .username-status.error {
+        color: #f87171;
+    }
+    .personal-code-inputs {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .personal-code-inputs input {
+        width: 2.5rem;
+        text-align: center;
+        font-size: 1rem;
+    }
+</style>
+{% endblock style %}
+
+{% block content %}
+<div class="glass rounded-xl p-6 max-w-3xl mx-auto relative">
+    <h1 class="text-3xl font-bold text-yellow-400 mb-6 text-center">Yangi Foydalanuvchi Qo‘shish</h1>
+
+    <!-- Ogohlantirish xabari -->
+    <div class="glass bg-yellow-500/20 text-yellow-300 p-4 rounded-lg mb-6">
+        <i class="fas fa-info-circle mr-2"></i>
+        Eslatma: Foydalanuvchi uchun default parol <strong>admin1231</strong> sifatida o‘rnatiladi.
+    </div>
+
+    <!-- Xato xabari -->
+    {% if error %}
+    <div class="glass bg-red-500/20 text-red-300 p-4 rounded-lg mb-6">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'add_user' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-yellow-400 mb-1">Username *</label>
+                <input name="username"
+                       id="username"
+                       type="text"
+                       required
+                       oninput="checkUsername()"
+                       class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                       placeholder="Username kiriting">
+                <span id="username-status" class="username-status"></span>
+            </div>
+            <div>
+                <label class="block text-yellow-400 mb-1">Ism *</label>
+                <input name="first_name"
+                       type="text"
+                       required
+                       class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                       placeholder="Ism kiriting">
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-yellow-400 mb-1">Familiya *</label>
+                <input name="last_name"
+                       type="text"
+                       required
+                       class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                       placeholder="Familiya kiriting">
+            </div>
+            <div>
+                <label class="block text-yellow-400 mb-1">Otasining ismi</label>
+                <input name="patronymic"
+                       type="text"
+                       class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                       placeholder="Otasining ismi kiriting">
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-yellow-400 mb-1">Tug‘ilgan sana</label>
+                <input name="birth_date"
+                       type="date"
+                       class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70">
+            </div>
+            <div>
+                <label class="block text-yellow-400 mb-1">Telefon raqami</label>
+                <input name="phone_number"
+                       type="text"
+                       class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                       placeholder="Telefon raqami kiriting">
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="block text-yellow-400 mb-1">Manzil</label>
+            <textarea name="address"
+                      class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                      placeholder="Manzil kiriting"></textarea>
+        </div>
+        <div class="mb-4">
+            <label class="block text-yellow-400 mb-1">Shaxsiy kod (4 raqam)</label>
+            <div class="personal-code-inputs">
+                <input type="text"
+                       name="personal_code_1"
+                       maxlength="1"
+                       pattern="\d"
+                       required
+                       oninput="moveToNext(this, 'personal_code_2')"
+                       class="search-input p-2 rounded-lg text-sm glass placeholder-yellow-400/70">
+                <input type="text"
+                       name="personal_code_2"
+                       maxlength="1"
+                       pattern="\d"
+                       required
+                       oninput="moveToNext(this, 'personal_code_3')"
+                       class="search-input p-2 rounded-lg text-sm glass placeholder-yellow-400/70">
+                <input type="text"
+                       name="personal_code_3"
+                       maxlength="1"
+                       pattern="\d"
+                       required
+                       oninput="moveToNext(this, 'personal_code_4')"
+                       class="search-input p-2 rounded-lg text-sm glass placeholder-yellow-400/70">
+                <input type="text"
+                       name="personal_code_4"
+                       maxlength="1"
+                       pattern="\d"
+                       required
+                       class="search-input p-2 rounded-lg text-sm glass placeholder-yellow-400/70">
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="block text-yellow-400 mb-1">Profil rasmi</label>
+            <div class="file-input-wrapper">
+                <input name="profile_picture"
+                       type="file"
+                       id="profile-picture"
+                       accept="image/*"
+                       onchange="previewImage(event)">
+                <label for="profile-picture" class="clear-button glass">Rasm tanlash</label>
+                <span class="file-name" id="file-name">Rasm tanlanmadi</span>
+            </div>
+            <img id="image-preview" class="preview-image" style="display: none;">
+        </div>
+        <div class="flex justify-end space-x-2">
+            <a href="{% url 'users' %}"
+               class="clear-button glass bg-blue-900/50 text-yellow-400 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-400 hover:text-blue-900 transition-all">
+                Bekor qilish
+            </a>
+            <button type="submit"
+                    class="clear-button glass bg-yellow-400 text-blue-900 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-300 transition-all">
+                Qo‘shish
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock content %}
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    function previewImage(event) {
+        const input = event.target;
+        const fileNameSpan = document.getElementById('file-name');
+        const preview = document.getElementById('image-preview');
+
+        if (input.files && input.files[0]) {
+            fileNameSpan.textContent = input.files[0].name;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            fileNameSpan.textContent = 'Rasm tanlanmadi';
+            preview.style.display = 'none';
+        }
+    }
+
+    function checkUsername() {
+        const usernameInput = document.getElementById('username');
+        const statusSpan = document.getElementById('username-status');
+        const username = usernameInput.value.trim();
+
+        if (!username) {
+            statusSpan.textContent = 'Username bo‘sh bo‘lmasligi kerak!';
+            statusSpan.className = 'username-status error';
+            return;
+        }
+
+        axios.post('{% url "check_username" %}', {
+            username: username,
+            csrfmiddlewaretoken: '{{ csrf_token }}'
+        }, {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).then(response => {
+            statusSpan.textContent = response.data.message;
+            statusSpan.className = `username-status ${response.data.status === 'success' ? 'success' : 'error'}`;
+        }).catch(error => {
+            statusSpan.textContent = 'Xatolik yuz berdi!';
+            statusSpan.className = 'username-status error';
+            console.error('Xato:', error);
+        });
+    }
+
+    function moveToNext(current, nextId) {
+        if (current.value.length === 1 && nextId) {
+            document.getElementById(nextId).focus();
+        }
+    }
+
+    // personal_code inputlari uchun ID qo‘shish
+    const personalCodeInputs = document.querySelectorAll('.personal-code-inputs input');
+    personalCodeInputs[0].id = 'personal_code_1';
+    personalCodeInputs[1].id = 'personal_code_2';
+    personalCodeInputs[2].id = 'personal_code_3';
+    personalCodeInputs[3].id = 'personal_code_4';
+</script>
+{% endblock script %}

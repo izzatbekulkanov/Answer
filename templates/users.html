@@ -1,0 +1,186 @@
+{% extends 'main.html' %}
+{% block title %}Foydalanuvchilar{% endblock %}
+{% block style %}
+<style>
+</style>
+{% endblock style %}
+
+{% block content %}
+<div class="glass rounded-xl p-6 max-w-4xl mx-auto relative" id="app">
+    <!-- Loader -->
+    <div v-if="isLoading" class="loader-overlay">
+        <div class="loader"></div>
+    </div>
+
+    <h1 class="text-3xl font-bold text-yellow-400 mb-6 text-center">Foydalanuvchilar Ro‘yxati</h1>
+
+    <!-- Yangi foydalanuvchi qo‘shish tugmasi -->
+    <div class="mb-6 flex justify-between items-center">
+        <a href="{% url 'add_user' %}"
+           class="clear-button glass bg-yellow-400 text-blue-900 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-300 transition-all">
+            <i class="fas fa-user-plus mr-1"></i> Yangi foydalanuvchi
+        </a>
+        <!-- Qidirish maydoni -->
+        <div class="flex items-center space-x-2">
+            <input v-model="searchQuery"
+                   type="text"
+                   placeholder="Ism, familiya yoki username bo‘yicha qidirish..."
+                   class="search-input w-[600px] p-3 rounded-lg text-sm glass placeholder-yellow-400/70">
+            <button v-if="searchQuery"
+                    @click="clearSearch"
+                    class="clear-button glass bg-blue-900/50 text-yellow-400 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-400 hover:text-blue-900 transition-all">
+                Tozalash
+            </button>
+        </div>
+    </div>
+
+    <!-- Foydalanuvchilar jadvali -->
+    <div v-if="filteredUsers.length > 0" class="table-container glass rounded-lg">
+        <table class="w-full text-sm">
+            <thead class="sticky top-0 glass bg-blue-900/30">
+                <tr>
+                    <th class="py-2 px-4 text-left text-yellow-400 font-semibold">№</th>
+                    <th class="py-2 px-4 text-left text-yellow-400 font-semibold">Username</th>
+                    <th class="py-2 px-4 text-left text-yellow-400 font-semibold">Ism</th>
+                    <th class="py-2 px-4 text-left text-yellow-400 font-semibold">Familiya</th>
+                    <th class="py-2 px-4 text-left text-yellow-400 font-semibold">Shaxsiy kod</th>
+                    <th class="py-2 px-4 text-left text-yellow-400 font-semibold">Yaratilgan</th>
+                    <th class="py-2 px-4 text-left text-yellow-400 font-semibold">Faol</th>
+                    <th class="py-2 px-4 text-left text-yellow-400 font-semibold">Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(user, index) in filteredUsers" :key="user.id" class="user-row">
+                    <td class="py-2 px-4 text-yellow-400">[[ index + 1 ]]</td>
+                    <td class="py-2 px-4 text-yellow-400">[[ user.username ]]</td>
+                    <td class="py-2 px-4 text-green-300">[[ user.first_name ]]</td>
+                    <td class="py-2 px-4 text-green-300">[[ user.last_name ]]</td>
+                    <td class="py-2 px-4 text-green-300">[[ user.personal_code || '-' ]]</td>
+                    <td class="py-2 px-4 text-green-300">[[ user.created_at ]]</td>
+                    <td class="py-2 px-4 text-green-300">[[ user.is_active ? 'Ha' : 'Yo‘q' ]]</td>
+                    <td class="py-2 px-4 flex space-x-2">
+                        {% if user.is_superuser %}
+                        <a :href="'/users/detail/' + user.id + '/'"
+                           class="clear-button glass bg-green-500/50 text-yellow-400 py-1 px-2 rounded-lg hover:bg-green-500 hover:text-white transition-all"
+                           title="Batafsil">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        {% endif %}
+                        <button @click="resetPassword(user.id)"
+                                class="clear-button glass bg-blue-900/50 text-yellow-400 py-1 px-2 rounded-lg hover:bg-yellow-400 hover:text-blue-900 transition-all"
+                                title="Parolni tiklash">
+                            <i class="fas fa-key"></i>
+                        </button>
+                        <button @click="deleteUser(user.id)"
+                                class="clear-button glass bg-red-500/50 text-yellow-400 py-1 px-2 rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                                title="O‘chirish">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <p v-else class="text-gray-300 text-center">Foydalanuvchilar topilmadi.</p>
+</div>
+{% endblock content %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        data() {
+            return {
+                users: [],
+                searchQuery: '',
+                isLoading: false
+            };
+        },
+        computed: {
+            filteredUsers() {
+                if (!this.searchQuery) return this.users;
+                const query = this.searchQuery.toLowerCase();
+                return this.users.filter(user =>
+                    user.username.toLowerCase().includes(query) ||
+                    user.first_name.toLowerCase().includes(query) ||
+                    user.last_name.toLowerCase().includes(query)
+                );
+            }
+        },
+        created() {
+            this.loadUsers();
+        },
+        methods: {
+            async loadUsers() {
+                this.isLoading = true;
+                try {
+                    const serverUsers = '{{ users_json|safe }}';
+                    if (serverUsers && serverUsers !== '[]') {
+                        this.users = JSON.parse(serverUsers);
+                    }
+                } catch (error) {
+                    console.error('JSON parse xatosi:', error);
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+            clearSearch() {
+                this.searchQuery = '';
+            },
+            async deleteUser(userId) {
+                if (!confirm('Foydalanuvchini o‘chirishni tasdiqlaysizmi?')) return;
+                this.isLoading = true;
+                try {
+                    const response = await axios.delete(`/users/delete/${userId}/`, {
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (response.data.status === 'success') {
+                        this.users = this.users.filter(user => user.id !== userId);
+                        alert(response.data.message);
+                    } else {
+                        alert(response.data.message);
+                    }
+                } catch (error) {
+                    console.error('Xato:', error);
+                    alert('Foydalanuvchi o‘chirishda xatolik yuz berdi!');
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+            async resetPassword(userId) {
+                if (!confirm('Parolni tiklashni tasdiqlaysizmi? Parol "admin1231" ga o‘zgaradi!')) return;
+                this.isLoading = true;
+                try {
+                    const response = await axios.post(`/users/reset-password/${userId}/`, {
+                        csrfmiddlewaretoken: '{{ csrf_token }}'
+                    }, {
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (response.data.status === 'success') {
+                        alert(response.data.message);
+                    } else {
+                        alert(response.data.message);
+                    }
+                } catch (error) {
+                    console.error('Xato:', error);
+                    alert('Parol tiklashda xatolik yuz berdi!');
+                } finally {
+                    this.isLoading = false;
+                }
+            }
+        }
+    }).mount('#app');
+</script>
+{% endblock script %}

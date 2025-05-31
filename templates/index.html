@@ -1,0 +1,181 @@
+{% extends 'main.html' %}
+{% block title %}Savollar va Javoblar{% endblock %}
+{% block style %}
+<style>
+    .clean-db-button:disabled, .search-button:disabled, .clear-button:disabled {
+        background: #6b7280;
+        cursor: not-allowed;
+        transform: none;
+    }
+    .question-row td {
+        vertical-align: top;
+    }
+    .error-message {
+        background: #fee2e2;
+        color: #b91c1c;
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock style %}
+
+{% block content %}
+<div class="glass rounded-xl p-6 max-w-4xl mx-auto relative" id="app">
+    <!-- Loader -->
+    <div v-if="isLoading" class="loader-overlay">
+        <div class="loader"></div>
+    </div>
+
+    <h1 class="text-3xl font-bold text-yellow-400 mb-6 text-center">Savollar Ro‘yxati</h1>
+
+    <!-- Ogohlantirish -->
+    <div class="warning-message bg-red-100 text-red-700 p-3 rounded-md mb-4">
+        <strong>Ogohlantirish:</strong> `\`, `'`, va shunga o‘xshash maxsus belgilarni ishlatmang!
+    </div>
+
+{#    <!-- Xatolik xabari -->#}
+{#    <div v-if="errorMessage" class="error-message">#}
+{#        [[ errorMessage ]]#}
+{#    </div>#}
+
+    <!-- Qidirish maydoni, qidirish va tozalash tugmalari -->
+    <div class="mb-6 flex items-center space-x-2">
+        <input v-model="searchQuery"
+               @keyup.enter="searchQuestions"
+               type="text"
+               placeholder="Savol yoki javob bo‘yicha qidirish..."
+               class="search-input w-full p-3 rounded-lg text-sm glass placeholder-yellow-400/70">
+        <button @click="searchQuestions"
+                class="search-button glass bg-blue-900/50 text-yellow-400 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-400 hover:text-blue-900 transition-all"
+                :disabled="isLoading">
+            Qidirish
+        </button>
+        <button v-if="searchQuery"
+                @click="clearSearch"
+                class="clear-button glass bg-blue-900/50 text-yellow-400 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-400 hover:text-blue-900 transition-all"
+                :disabled="isLoading">
+            Tozalash
+        </button>
+    </div>
+
+    <!-- Ma'lumotlarni tozalash tugmasi -->
+    <div class="mb-6">
+        <button @click="cleanDuplicates"
+                class="clean-db-button glass bg-yellow-400 text-blue-900 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-300 transition-all w-full"
+                :disabled="isLoading">
+            Ma'lumotlarni tozalash
+        </button>
+    </div>
+
+    <!-- Savollar jadvali -->
+    <div v-if="filteredQuestions.length > 0" class="table-container glass rounded-lg">
+        <table class="w-full text-sm">
+            <thead class="sticky top-0 glass bg-blue-900/30">
+                <tr>
+                    <th class="py-2 px-4 text-left text-yellow-400 font-semibold">Savol</th>
+                    <th class="py-2 px-4 text-left text-yellow-400 font-semibold">To‘g‘ri javob</th>
+                    <th class="py-2 px-4 text-left text-yellow-400 font-semibold">Qo‘shilgan</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(question, index) in filteredQuestions" :key="question.id" class="question-row">
+                    <td class="py-2 px-4 text-yellow-400">[[ index + 1 ]]. [[ question.text ]]</td>
+                    <td class="py-2 px-4 text-green-300">
+                        <span v-for="(answer, aIndex) in question.answers.filter(a => a.is_correct)" :key="aIndex">
+                            [[ answer.text ]][[ aIndex < question.answers.filter(a => a.is_correct).length - 1 ? ', ' : '' ]]
+                        </span>
+                    </td>
+                    <td class="py-2 px-4 text-gray-300">[[ question.added_by ]] ([[ question.created_at ]])</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <p v-else class="text-gray-300 text-center">[[ errorMessage || 'Savollar topilmadi.' ]]</p>
+
+    <!-- Umumiy savollar soni -->
+    <p class="mt-4 text-gray-300 text-center">Jami savollar: [[ totalQuestions ]]</p>
+</div>
+{% endblock content %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        data() {
+            return {
+                questions: [],
+                searchQuery: '{{ search_query|safe }}',
+                isLoading: false,
+                totalQuestions: {{ total_questions|default:0 }},
+                errorMessage: '{{ error|safe }}'
+            };
+        },
+        computed: {
+            filteredQuestions() {
+                return this.questions;
+            }
+        },
+        created() {
+            this.loadQuestions();
+        },
+        methods: {
+            async loadQuestions() {
+                this.isLoading = true;
+                try {
+                    const serverQuestions = '{{ questions_json|safe|escapejs }}';
+                    if (serverQuestions && serverQuestions !== '[]') {
+                        this.questions = JSON.parse(serverQuestions);
+                    } else {
+                        this.errorMessage = 'Savollar topilmadi.';
+                    }
+                } catch (error) {
+                    console.error('JSON parse xatosi:', error);
+                    this.errorMessage = 'Ma\'lumotlarni yuklashda xatolik: JSON formati noto‘g‘ri.';
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+            searchQuestions() {
+                if (!this.searchQuery.trim()) return;
+                this.isLoading = true;
+                const url = new URL(window.location);
+                url.searchParams.set('q', this.searchQuery);
+                window.location.href = url.toString();
+            },
+            clearSearch() {
+                this.isLoading = true;
+                window.location.href = '/';
+            },
+            async cleanDuplicates() {
+                this.isLoading = true;
+                try {
+                    const formData = new FormData();
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                    const response = await axios.post('{% url "clean_duplicates" %}', formData, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (response.data.status === 'success') {
+                        alert(response.data.message);
+                        window.location.reload();
+                    } else {
+                        alert('Xato: ' + response.data.message);
+                    }
+                } catch (error) {
+                    console.error('Xato:', error);
+                    alert('Tozalashda xatolik yuz berdi.');
+                } finally {
+                    this.isLoading = false;
+                }
+            }
+        }
+    }).mount('#app');
+</script>
+{% endblock script %}
