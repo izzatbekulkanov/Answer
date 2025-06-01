@@ -1,24 +1,39 @@
 {% extends 'main.html' %}
 {% block title %}Foydalanuvchi Ma'lumotlari{% endblock %}
+
 {% block style %}
 <style>
     .profile-container {
-        max-width: 1000px;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1.5rem;
         display: grid;
-        gap: 1.5rem;
+        gap: 1rem;
+        grid-template-columns: 1fr;
+    }
+    .profile-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     .profile-pic {
-        width: 200px;
-        height: 200px;
+        width: 150px;
+        height: 150px;
         border-radius: 50%;
         object-fit: cover;
-        border: 2px solid #facc15;
+        border: 3px solid #facc15;
+        transition: transform 0.3s ease;
+    }
+    .profile-pic:hover {
+        transform: scale(1.05);
     }
     .file-input-wrapper {
-        position: relative;
         display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
         align-items: center;
-        gap: 1rem;
     }
     .file-input-wrapper input[type="file"] {
         display: none;
@@ -27,8 +42,10 @@
         cursor: pointer;
         background: #1e3a8a;
         color: #facc15;
-        padding: 0.5rem 1rem;
+        padding: 0.5rem 1.25rem;
         border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
         transition: all 0.3s ease;
     }
     .file-input-wrapper label:hover {
@@ -38,16 +55,18 @@
     .file-name {
         color: #facc15;
         font-size: 0.875rem;
+        font-style: italic;
     }
     .preview-image {
-        max-width: 100px;
-        max-height: 100px;
+        max-width: 80px;
+        max-height: 80px;
         border-radius: 0.5rem;
         margin-top: 0.5rem;
     }
     .status {
         font-size: 0.875rem;
         margin-top: 0.25rem;
+        font-weight: 500;
     }
     .status.success {
         color: #34d399;
@@ -60,109 +79,161 @@
         gap: 0.5rem;
     }
     .personal-code-inputs input {
-        width: 2.5rem;
+        width: 3rem;
+        height: 3rem;
         text-align: center;
-        font-size: 1rem;
+        font-size: 1.125rem;
+        border-radius: 0.5rem;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .personal-code-inputs input:focus {
+        border-color: #facc15;
+        box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.3);
+    }
+    .form-label {
+        color: #facc15;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    .form-input {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #facc15;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        width: 100%;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .form-input:focus {
+        border-color: #facc15;
+        box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.3);
+        outline: none;
+    }
+    .form-input::placeholder {
+        color: #facc15;
+        opacity: 0.7;
+    }
+    .usage-section {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        margin-top: 1.5rem;
+    }
+    .usage-section h3 {
+        color: #facc15;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    .usage-section p {
+        color: #fff;
+        font-size: 0.875rem;
+    }
+    @media (min-width: 768px) {
+        .profile-container {
+            grid-template-columns: 300px 1fr;
+        }
     }
 </style>
 {% endblock style %}
 
 {% block content %}
-<div class="glass rounded-xl p-6 max-w-3xl mx-auto relative profile-container">
-    <h1 class="text-3xl font-bold text-yellow-400 mb-6 text-center">Foydalanuvchi Ma'lumotlari</h1>
-
-    <!-- Xato xabari -->
-    {% if error %}
-    <div class="glass bg-red-500/20 text-red-300 p-4 rounded-lg mb-6">
-        {{ error }}
+<div class="profile-container">
+    <!-- Profile Picture Section -->
+    <div class="profile-card flex flex-col items-center">
+        <h2 class="text-2xl font-bold text-yellow-400 mb-4">Profil Rasmi</h2>
+        {% if user.profile_picture %}
+        <img src="{{ user.profile_picture.url }}" alt="Profil rasmi" class="profile-pic mb-4">
+        {% else %}
+        <div class="w-20 h-20 rounded-full bg-blue-900/50 flex items-center justify-center text-yellow-400 text-xl mb-4">
+            <i class="fas fa-user"></i>
+        </div>
+        {% endif %}
+        <div class="file-input-wrapper">
+            <input name="profile_picture"
+                   type="file"
+                   id="profile-picture"
+                   accept="image/*"
+                   onchange="previewImage(event)">
+            <label for="profile-picture" class="clear-button">Rasm tanlash</label>
+            <span class="file-name" id="file-name">Rasm tanlanmadi</span>
+        </div>
+        <img id="image-preview" class="preview-image" style="display: none;">
     </div>
-    {% else %}
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Profil rasmi -->
-            <div class="flex flex-col items-center">
-                {% if user.profile_picture %}
-                <img src="{{ user.profile_picture.url }}" alt="Profil rasmi" class="profile-pic mb-4">
-                {% else %}
-                <div class="w-20 h-20 rounded-full bg-blue-900/50 flex items-center justify-center text-yellow-400 text-xl mb-4">
-                    <i class="fas fa-user"></i>
-                </div>
-                {% endif %}
-                <div class="file-input-wrapper">
-                    <input name="profile_picture"
-                           type="file"
-                           id="profile-picture"
-                           accept="image/*"
-                           onchange="previewImage(event)">
-                    <label for="profile-picture" class="clear-button glass">Rasm tanlash</label>
-                    <span class="file-name" id="file-name">Rasm tanlanmadi</span>
-                </div>
-                <img id="image-preview" class="preview-image" style="display: none;">
-            </div>
-            <!-- Ma'lumotlar -->
-            <div>
-                <div class="mb-4">
-                    <label class="block text-yellow-400 mb-1">Username *</label>
+
+    <!-- User Details Form -->
+    <div class="profile-card">
+        <h1 class="text-3xl font-bold text-yellow-400 mb-6">Foydalanuvchi Ma'lumotlari</h1>
+        {% if error %}
+        <div class="bg-red-500/20 text-red-300 p-4 rounded-lg mb-6">
+            {{ error }}
+        </div>
+        {% else %}
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label class="form-label">Username *</label>
                     <input name="username"
                            id="username"
                            type="text"
                            required
                            value="{{ user.username }}"
                            oninput="checkUsername()"
-                           class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                           class="form-input"
                            placeholder="Username kiriting">
                     <span id="username-status" class="status"></span>
                 </div>
-                <div class="mb-4">
-                    <label class="block text-yellow-400 mb-1">Ism *</label>
+                <div>
+                    <label class="form-label">Ism *</label>
                     <input name="first_name"
                            type="text"
                            required
                            value="{{ user.first_name }}"
-                           class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                           class="form-input"
                            placeholder="Ism kiriting">
                 </div>
-                <div class="mb-4">
-                    <label class="block text-yellow-400 mb-1">Familiya *</label>
+                <div>
+                    <label class="form-label">Familiya *</label>
                     <input name="last_name"
                            type="text"
                            required
                            value="{{ user.last_name }}"
-                           class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                           class="form-input"
                            placeholder="Familiya kiriting">
                 </div>
-                <div class="mb-4">
-                    <label class="block text-yellow-400 mb-1">Otasining ismi</label>
+                <div>
+                    <label class="form-label">Otasining ismi</label>
                     <input name="patronymic"
                            type="text"
                            value="{{ user.patronymic|default:'' }}"
-                           class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                           class="form-input"
                            placeholder="Otasining ismi kiriting">
                 </div>
-                <div class="mb-4">
-                    <label class="block text-yellow-400 mb-1">Tug‘ilgan sana</label>
+                <div>
+                    <label class="form-label">Tug‘ilgan sana</label>
                     <input name="birth_date"
                            type="date"
                            value="{{ user.birth_date|date:'Y-m-d'|default:'' }}"
-                           class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70">
+                           class="form-input">
                 </div>
-                <div class="mb-4">
-                    <label class="block text-yellow-400 mb-1">Telefon raqami</label>
+                <div>
+                    <label class="form-label">Telefon raqami</label>
                     <input name="phone_number"
                            type="text"
                            value="{{ user.phone_number|default:'' }}"
-                           class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                           class="form-input"
                            placeholder="Telefon raqami kiriting">
                 </div>
-                <div class="mb-4">
-                    <label class="block text-yellow-400 mb-1">Manzil</label>
+                <div>
+                    <label class="form-label">Manzil</label>
                     <textarea name="address"
-                              class="search-input w-full p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                              class="form-input"
                               placeholder="Manzil kiriting">{{ user.address|default:'' }}</textarea>
                 </div>
-                <div class="mb-4">
-                    <label class="block text-yellow-400 mb-1">Shaxsiy kod (4 raqam)</label>
+                <div>
+                    <label class="form-label">Shaxsiy kod (4 raqam)</label>
                     <div class="personal-code-inputs">
                         <input type="text"
                                name="personal_code_1"
@@ -171,7 +242,7 @@
                                required
                                value="{{ user.personal_code|slice:':1'|default:'' }}"
                                oninput="moveToNext(this, 'personal_code_2'); checkPersonalCode()"
-                               class="search-input p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                               class="form-input"
                                id="personal_code_1">
                         <input type="text"
                                name="personal_code_2"
@@ -180,7 +251,7 @@
                                required
                                value="{{ user.personal_code|slice:'1:2'|default:'' }}"
                                oninput="moveToNext(this, 'personal_code_3'); checkPersonalCode()"
-                               class="search-input p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                               class="form-input"
                                id="personal_code_2">
                         <input type="text"
                                name="personal_code_3"
@@ -189,7 +260,7 @@
                                required
                                value="{{ user.personal_code|slice:'2:3'|default:'' }}"
                                oninput="moveToNext(this, 'personal_code_4'); checkPersonalCode()"
-                               class="search-input p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                               class="form-input"
                                id="personal_code_3">
                         <input type="text"
                                name="personal_code_4"
@@ -198,12 +269,12 @@
                                required
                                value="{{ user.personal_code|slice:'3:4'|default:'' }}"
                                oninput="checkPersonalCode()"
-                               class="search-input p-2 rounded-lg text-sm glass placeholder-yellow-400/70"
+                               class="form-input"
                                id="personal_code_4">
                     </div>
                     <span id="personal-code-status" class="status"></span>
                 </div>
-                <div class="mb-4">
+                <div>
                     <label class="flex items-center text-yellow-400">
                         <input name="is_active"
                                type="checkbox"
@@ -213,21 +284,35 @@
                     </label>
                 </div>
             </div>
-        </div>
-        <div class="flex justify-end space-x-2 mt-6">
-            <a href="{% url 'users' %}"
-               class="clear-button glass bg-blue-900/50 text-yellow-400 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-400 hover:text-blue-900 transition-all">
-                Orqaga
-            </a>
-            <button type="submit"
-                    class="clear-button glass bg-yellow-400 text-blue-900 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-300 transition-all">
-                Saqlash
-            </button>
-        </div>
-    </form>
-    {% endif %}
+            <!-- User Usage Section -->
+            <div class="usage-section">
+                <h3>Foydalanish Statistikasi</h3>
+                {% if user.usages.exists %}
+                {% for usage in user.usages.all %}
+                <p>Foydalanish soni: {{ usage.usage_count }} marta</p>
+                <p>Oxirgi foydalanish: {{ usage.last_used|date:'Y-m-d H:i:s' }}</p>
+                {% endfor %}
+                {% else %}
+                <p>Foydalanuvchi hali extension’dan foydalanmagan.</p>
+                {% endif %}
+            </div>
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-2 mt-6">
+                <a href="{% url 'users' %}"
+                   class="clear-button bg-blue-900/50 text-yellow-400 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-400 hover:text-blue-900 transition-all">
+                    Orqaga
+                </a>
+                <button type="submit"
+                        class="clear-button bg-yellow-400 text-blue-900 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-300 transition-all">
+                    Saqlash
+                </button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
 </div>
 {% endblock content %}
+
 {% block script %}
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
