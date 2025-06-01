@@ -28,30 +28,24 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 # CORS ruxsatlari
-CORS_ALLOW_ALL_ORIGINS = False
+# Barcha manbalardan so‘rov qabul qilish
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
-    "https://test.ulkanov.uz",
-]
-
-# CSRF uchun domenni ishonchli sifatida belgilash
-CSRF_TRUSTED_ORIGINS = [
     "https://test.ulkanov.uz",
 ]
 
 
 CORS_ALLOW_METHODS = [
-    "GET",
-    "POST",
-    "OPTIONS",
+    'GET',
+    'POST',
+    'OPTIONS',
 ]
-CORS_ALLOW_HEADERS = [
-    "content-type",
-    "authorization",
-    "x-csrftoken",
+
+APPEND_SLASH = True  # Bu odatiy sozlama, URL oxiriga / qo‘shadi
+# CSRF uchun domenni ishonchli sifatida belgilash
+CSRF_TRUSTED_ORIGINS = [
+    "https://test.ulkanov.uz",
 ]
-CORS_ALLOW_CREDENTIALS = True
-
-
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [

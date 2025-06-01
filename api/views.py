@@ -1,6 +1,5 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-
 from quiz_app.models import Question, CustomUser, UserUsage
 from quiz_app.views import clean_text, clean_json_string
 from fuzzywuzzy import fuzz
@@ -101,7 +100,7 @@ def track_usage(request):
             "message": f"Xatolik: {str(e)}"
         }, status=500)
 
-
+@csrf_exempt
 def search_question(request):
     print("🔍 Kiruvchi so‘rov:", request.method)
 
